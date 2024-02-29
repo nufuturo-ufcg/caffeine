@@ -15,4 +15,4 @@ jitwatch.out
 *.iml
 hs_err_pid*.log
 replay_pid*.log
-simulator/src/main/resources/application.conf
+# simulator/src/main/resources/application.conf
