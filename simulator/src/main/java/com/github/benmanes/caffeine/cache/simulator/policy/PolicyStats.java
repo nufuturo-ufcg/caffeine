@@ -23,6 +23,8 @@ import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
 import static org.apache.commons.lang3.builder.ToStringStyle.MULTI_LINE_STYLE;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.DoubleSupplier;
@@ -48,6 +50,8 @@ public class PolicyStats {
   private final Map<String, Metric> metrics;
   private final Stopwatch stopwatch;
   private final String name;
+  private Clock clock;
+  private final long initialTime;
 
   private long hitCount;
   private long missCount;
@@ -66,6 +70,8 @@ public class PolicyStats {
     this.stopwatch = Stopwatch.createUnstarted();
     this.name = String.format(US, format, args);
     this.metrics = new LinkedHashMap<>();
+    this.clock = Clock.systemUTC();
+    this.initialTime = this.clock.instant().getEpochSecond();
 
     addMetric(Metric.of("Policy", (Supplier<String>) this::name, OBJECT, true));
     addMetric(Metric.of("Hit Rate", (DoubleSupplier) this::hitRate, PERCENT, true));
@@ -146,6 +152,9 @@ public class PolicyStats {
   }
 
   public void recordHit() {
+    Instant i = this.clock.instant();
+    long time = i.getEpochSecond() - this.initialTime;
+    System.out.println(String.valueOf(time) + ",0");
     hitCount++;
   }
 
@@ -175,6 +184,9 @@ public class PolicyStats {
   }
 
   public void recordMiss() {
+    Instant i = this.clock.instant();
+    long time = i.getEpochSecond() - this.initialTime;
+    System.out.println(String.valueOf(time) + ",1");
     missCount++;
   }
 
