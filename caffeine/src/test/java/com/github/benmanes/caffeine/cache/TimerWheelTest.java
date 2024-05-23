@@ -64,7 +64,7 @@ import it.unimi.dsi.fastutil.longs.LongArrayList;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @Test(singleThreaded = true)
-@SuppressWarnings("GuardedBy")
+@SuppressWarnings({"ClassEscapesDefinedScope", "GuardedBy"})
 public final class TimerWheelTest {
   private static final Random random = new Random();
   private static final long[] CLOCKS = { Long.MIN_VALUE, -SPANS[0] + 1, 0L,
@@ -402,7 +402,7 @@ public final class TimerWheelTest {
 
   @Test(dataProvider = "clock")
   public void expire_reschedule(long clock) {
-    when(cache.evictEntry(captor.capture(), any(), anyLong())).thenAnswer(invocation -> {
+    when(cache.evictEntry(captor.capture(), any(), anyLong())).then(invocation -> {
       Timer timer = invocation.getArgument(0);
       timer.setVariableTime(timerWheel.nanos + 100);
       return false;

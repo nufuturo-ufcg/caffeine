@@ -53,10 +53,12 @@ Use Caffeine in a community provided integration:
 * [Play Framework][play]: High velocity web framework
 * [Micronaut][micronaut]: A modern, full-stack framework
 * [Spring Cache][spring]: As of Spring 4.3 & Boot 1.4
+* [Coroutines][caffeine-coroutines]: Kotlin Coroutines extension
+* [Bootique][bootique]: A fast, simple Java platform
 * [Quarkus][quarkus]: Supersonic Subatomic Java
+* [Camel][camel]: Routing and mediation engine
 * [Scaffeine][scaffeine]: Scala wrapper for Caffeine
 * [ScalaCache][scala-cache]: Simple caching in Scala
-* [Camel][camel]: Routing and mediation engine
 * [JHipster][jhipster]: Generate, develop, deploy
 * [Aedile][aedile]: Kotlin wrapper for Caffeine
 
@@ -161,3 +163,5 @@ Snapshots of the development version are available in
 [grails]: https://grails.org
 [quarkus]: https://quarkus.io
 [aedile]: https://github.com/sksamuel/aedile
+[bootique]: https://bootique.io/
+[caffeine-coroutines]: https://github.com/be-hase/caffeine-coroutines

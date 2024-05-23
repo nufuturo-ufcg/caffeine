@@ -848,9 +848,9 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     try {
       cache.asMap().compute(copyOf(key), remappingFunction);
       dispatcher.awaitSynchronous();
-    } catch (Throwable thr) {
+    } catch (Throwable t) {
       dispatcher.ignoreSynchronous();
-      throw thr;
+      throw t;
     }
 
     @SuppressWarnings("unchecked")
@@ -859,8 +859,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
   }
 
   /** Returns the updated expirable value after performing the post-processing actions. */
-  @SuppressWarnings({"fallthrough", "NullAway",
-    "PMD.MissingBreakInSwitch", "PMD.SwitchStmtsShouldHaveDefault"})
+  @SuppressWarnings({"fallthrough", "NullAway", "PMD.MissingBreakInSwitch"})
   private @Nullable Expirable<V> postProcess(@Nullable Expirable<V> expirable,
       EntryProcessorEntry<K, V> entry, long currentTimeMS) {
     switch (entry.getAction()) {
@@ -1252,7 +1251,7 @@ public class CacheProxy<K, V> implements Cache<K, V> {
     }
   }
 
-  private static final class PutResult<V> {
+  protected static final class PutResult<V> {
     @Nullable V oldValue;
     boolean written;
   }

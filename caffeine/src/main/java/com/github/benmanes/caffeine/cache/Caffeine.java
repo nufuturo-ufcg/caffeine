@@ -496,7 +496,7 @@ public final class Caffeine<K, V> {
     return isWeighted() ? maximumWeight : maximumSize;
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"JavaAnnotator", "unchecked"})
   <K1 extends K, V1 extends V> Weigher<K1, V1> getWeigher(boolean isAsync) {
     Weigher<K1, V1> delegate = (weigher == null) || (weigher == Weigher.singletonWeigher())
         ? Weigher.singletonWeigher()
@@ -844,7 +844,8 @@ public final class Caffeine<K, V> {
    * expired or refreshed. By default, {@link System#nanoTime} is used.
    * <p>
    * The primary intent of this method is to facilitate testing of caches which have been configured
-   * with {@link #expireAfterWrite}, {@link #expireAfterAccess}, or {@link #refreshAfterWrite}.
+   * with {@link #expireAfterWrite}, {@link #expireAfterAccess}, or {@link #refreshAfterWrite}. Note
+   * that this ticker is not used when recording statistics.
    *
    * @param ticker a nanosecond-precision time source
    * @return this {@code Caffeine} instance (for chaining)
@@ -860,7 +861,7 @@ public final class Caffeine<K, V> {
 
   Ticker getTicker() {
     boolean useTicker = expiresVariable() || expiresAfterAccess()
-        || expiresAfterWrite() || refreshAfterWrite() || isRecordingStats();
+        || expiresAfterWrite() || refreshAfterWrite();
     return useTicker
         ? (ticker == null) ? Ticker.systemTicker() : ticker
         : Ticker.disabledTicker();
@@ -912,7 +913,7 @@ public final class Caffeine<K, V> {
     return self;
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"JavaAnnotator", "unchecked"})
   <K1 extends K, V1 extends V> @Nullable RemovalListener<K1, V1> getEvictionListener(
       boolean async) {
     var castedListener = (RemovalListener<K1, V1>) evictionListener;
@@ -964,7 +965,7 @@ public final class Caffeine<K, V> {
     return self;
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"JavaAnnotator", "unchecked"})
   @Nullable <K1 extends K, V1 extends V> RemovalListener<K1, V1> getRemovalListener(boolean async) {
     RemovalListener<K1, V1> castedListener = (RemovalListener<K1, V1>) removalListener;
     return async && (castedListener != null)

@@ -3,6 +3,8 @@ import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApis
 import kotlin.math.max
 import net.ltgt.gradle.errorprone.errorprone
 import org.gradle.api.tasks.PathSensitivity.RELATIVE
+import org.gradle.plugins.ide.eclipse.model.Classpath as EclipseClasspath
+import org.gradle.plugins.ide.eclipse.model.Library
 
 plugins {
   id("java-library-caffeine-conventions")
@@ -21,6 +23,7 @@ sourceSets {
 
 val compileJavaPoetJava by tasks.existing
 val javaAgent: Configuration by configurations.creating
+val collections4Sources: Configuration by configurations.creating
 var javaPoetImplementation: Configuration = configurations["javaPoetImplementation"]
 
 dependencies {
@@ -31,6 +34,7 @@ dependencies {
   testImplementation(libs.ycsb) {
     isTransitive = false
   }
+  testImplementation(libs.jazzer)
   testImplementation(libs.picocli)
   testImplementation(libs.jctools)
   testImplementation(libs.fastutil)
@@ -42,6 +46,11 @@ dependencies {
   testImplementation(libs.commons.collections4) {
     artifact {
       classifier = "tests"
+    }
+  }
+  collections4Sources(libs.commons.collections4) {
+    artifact {
+      classifier = "test-sources"
     }
   }
   testImplementation(sourceSets["codeGen"].output)
@@ -140,16 +149,23 @@ tasks.register<Test>("lincheckTest") {
   description = "Tests that assert linearizability"
   enabled = (System.getenv("JDK_EA") != "true")
   useTestNG {
-    jvmArgs(
-      "--add-opens", "java.base/jdk.internal.vm=ALL-UNNAMED",
-      "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
-      "--add-opens", "java.base/jdk.internal.access=ALL-UNNAMED",
-      "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED")
     testLogging.events("started")
     includeGroups("lincheck")
     maxHeapSize = "3g"
     failFast = true
   }
+}
+
+tasks.register<Test>("fuzzTest") {
+  group = "Verification"
+  description = "Fuzz tests"
+
+  forkEvery = 1
+  failFast = true
+  useJUnitPlatform()
+  testLogging.events("started")
+  environment("JAZZER_FUZZ", "1")
+  include("com/github/benmanes/caffeine/fuzz/**")
 }
 
 val junitTest = tasks.register<Test>("junitTest") {
@@ -162,6 +178,7 @@ val junitTest = tasks.register<Test>("junitTest") {
   useJUnit()
   failFast = true
   maxHeapSize = "2g"
+  exclude("com/github/benmanes/caffeine/fuzz/**")
   systemProperty("caffeine.osgi.jar", relativePath(jar.get().archiveFile.get().asFile.path))
 }
 
@@ -234,6 +251,7 @@ tasks.register<JavaExec>("memoryOverhead") {
 tasks.register<Stress>("stress") {
   group = "Cache tests"
   description = "Executes a stress test"
+  mainClass = "com.github.benmanes.caffeine.cache.Stresser"
   classpath = sourceSets["codeGen"].runtimeClasspath + sourceSets["test"].runtimeClasspath
   outputs.upToDateWhen { false }
   dependsOn(tasks.compileTestJava)
@@ -256,15 +274,15 @@ for (scenario in Scenario.all()) {
         "implementation" to implementation)
 
       useTestNG {
-        if (slow == Slow.Disabled) {
-          threadCount = max(6, Runtime.getRuntime().availableProcessors() - 1)
-          jvmArgs("-XX:+UseG1GC", "-XX:+ParallelRefProcEnabled")
-          excludeGroups("slow", "isolated", "lincheck")
-          parallel = "methods"
-        } else {
-          jvmArgs("-XX:+UseParallelGC")
-          includeGroups.add("slow")
+        if (slow == Slow.Enabled) {
           maxParallelForks = 2
+          includeGroups.add("slow")
+          jvmArgs("-XX:+UseParallelGC")
+        } else {
+          parallel = "methods"
+          excludeGroups("slow", "isolated", "lincheck")
+          jvmArgs("-XX:+UseG1GC", "-XX:+ParallelRefProcEnabled")
+          threadCount = max(6, Runtime.getRuntime().availableProcessors() - 1)
         }
       }
     }
@@ -274,31 +292,35 @@ for (scenario in Scenario.all()) {
   }
 }
 
-eclipse {
-  classpath.plusConfigurations.add(configurations["javaPoetCompileClasspath"])
+eclipse.classpath {
+  plusConfigurations.add(configurations["javaPoetCompileClasspath"])
+
+  file.whenMerged {
+    if (this is EclipseClasspath) {
+      val regex = ".*collections4.*-tests.jar".toRegex()
+      entries.filterIsInstance<Library>()
+        .filter { regex.matches(it.path) }
+        .forEach { it.sourcePath = fileReference(file(collections4Sources.asPath)) }
+    }
+  }
 }
 
 idea.module {
   scopes["PROVIDED"]!!["plus"]!!.add(configurations["javaPoetCompileClasspath"])
 }
 
-abstract class Stress @Inject constructor(@Internal val external: ExecOperations) : DefaultTask() {
-  @get:Input @get:Optional @get:Option(option = "workload", description = "The workload type")
-  abstract val operation: Property<String>
-  @get:InputFiles @get:Classpath
-  abstract val classpath: Property<FileCollection>
+abstract class Stress : JavaExec() {
+  @Input @Option(option = "workload", description = "The workload type")
+  var operation: String = ""
 
   @TaskAction
-  fun run() {
-    external.javaexec {
-      mainClass = "com.github.benmanes.caffeine.cache.Stresser"
-      classpath(this@Stress.classpath)
-      if (operation.isPresent) {
-        args("--workload", operation.get())
-      } else {
-        args("--help")
-      }
+  override fun exec() {
+    if (operation.isNotEmpty()) {
+      args("--workload", operation)
+    } else {
+      args("--help")
     }
+    super.exec()
   }
 }
 

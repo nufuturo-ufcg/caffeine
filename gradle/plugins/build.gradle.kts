@@ -16,7 +16,6 @@ plugins {
   alias(libs.plugins.versions)
 }
 
-require(JavaVersion.current() >= JavaVersion.VERSION_17) { "Java 17 or greater is required" }
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
 dependencies {
@@ -33,6 +32,7 @@ dependencies {
   implementation(libs.dependency.check)
   implementation(libs.errorprone.plugin)
   implementation(libs.dependency.versions)
+  implementation(libs.jvm.dependency.conflict.resolution)
   implementation(libs.coveralls) {
     exclude(group = "net.sourceforge.nekohtml", module = "nekohtml")
   }
@@ -52,12 +52,18 @@ dependencies {
 }
 
 tasks.withType<DependencyUpdatesTask> {
+  checkBuildEnvironmentConstraints = true
+  checkConstraints = true
   resolutionStrategy {
     componentSelection {
       val ignoredGroups = listOf("org.jetbrains.kotlin", "org.gradle.kotlin.kotlin-dsl")
+      val stable = setOf("com.fasterxml.jackson", "com.squareup.okhttp3")
+      val isNonStable = "^[0-9,.v-]+(-r)?$".toRegex()
       all {
         if ((candidate.group in ignoredGroups) && (candidate.version != currentVersion)) {
           reject("kotlin dsl")
+        } else if ((candidate.group in stable) && !isNonStable.matches(candidate.version)) {
+          reject("Release candidate")
         }
       }
     }

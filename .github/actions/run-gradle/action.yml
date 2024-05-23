@@ -2,22 +2,30 @@ name: Run Gradle
 description: Sets up Gradle JDKs and runs Gradle
 inputs:
   arguments:
-    required: true
+    required: false
     description: Gradle arguments
   java:
     required: true
     description: The JDK version
   early-access:
-    default: '22'
+    default: '23'
     required: false
     description: The early access release
   graal:
-    default: '17'
+    default: '21'
     required: false
     description: The GraalVM version
   token:
     required: false
     description: 'A Github PAT'
+  attempt-limit:
+    default: '1'
+    required: false
+    description: Number of attempts
+  attempt-delay:
+    default: '0'
+    required: false
+    description: A delay between attempts in seconds
 runs:
   using: composite
   steps:
@@ -32,24 +40,23 @@ runs:
         echo "GRAALVM=true" >> $GITHUB_ENV
         echo "JAVA_VERSION=${{ inputs.graal }}" >> $GITHUB_ENV
     - name: Set up JDK ${{ inputs.java }}
-      uses: actions/setup-java@9704b39bf258b59bc04b50fa2dd55e9ed76b47a8 # v4.1.0
+      uses: actions/setup-java@99b8673ff64fbf99d8d325f52d9a5bdedb8483e9 # v4.2.1
       if: (inputs.early-access != inputs.java) && (inputs.java != 'GraalVM')
       with:
         java-version: ${{ inputs.java }}
         distribution: temurin
     - name: Set up JDK ${{ inputs.java }}
-      uses: oracle-actions/setup-java@8294b2d42db153962a75462461be076c5298a7c1 # v1.3.3
+      uses: oracle-actions/setup-java@83e2004a40aaa491fbc6b4697353b9a75b095efb # v1.3.4
       if: (inputs.early-access == inputs.java) && (inputs.java != 'GraalVM')
       with:
         release: ${{ inputs.java }}
         website: jdk.java.net
         version: latest
     - name: Set up GraalVM
-      uses: graalvm/setup-graalvm@5c3001733f88c5e6475916e448f865429d2c154e # v1
+      uses: graalvm/setup-graalvm@2f25c0caae5b220866f732832d5e3e29ff493338 # v1.2.1
       if: inputs.java == 'GraalVM'
       with:
         distribution: 'graalvm'
-        components: 'native-image'
         github-token: ${{ inputs.token }}
         java-version: ${{ env.JAVA_VERSION }}
     - name: Prepare JDK ${{ inputs.java }}
@@ -59,15 +66,14 @@ runs:
         echo "JDK_EA=${{ inputs.early-access == inputs.java }}" >> $GITHUB_ENV
     - name: Set up JDK 17
       id: setup-gradle-jdk
-      uses: actions/setup-java@9704b39bf258b59bc04b50fa2dd55e9ed76b47a8 # v4.1.0
+      uses: actions/setup-java@99b8673ff64fbf99d8d325f52d9a5bdedb8483e9 # v4.2.1
       if: inputs.java != 'GraalVM'
       with:
         java-version: 17
         distribution: temurin
     - name: Setup Gradle
       id: setup-gradle
-      uses: gradle/actions/setup-gradle@417ae3ccd767c252f5661f1ace9f835f9654f2b5 # v3.1.0
-      continue-on-error: true
+      uses: gradle/actions/setup-gradle@db19848a5fa7950289d3668fb053140cf3028d43 # v3.3.2
       env:
         JAVA_HOME: ${{ steps.setup-gradle-jdk.outputs.path }}
         ORG_GRADLE_PROJECT_org.gradle.java.installations.auto-download: 'false'
@@ -76,13 +82,21 @@ runs:
         cache-read-only: false
         gradle-home-cache-cleanup: true
         gradle-home-cache-strict-match: true
-    - name: Backoff
-      if: steps.setup-gradle.outcome == 'failure'
-      shell: bash
-      run: sleep 10
     - name: Run ${{ inputs.arguments }}
+      if: ${{ inputs.arguments != '' }}
       env:
         JAVA_HOME: ${{ steps.setup-gradle-jdk.outputs.path }}
         ORG_GRADLE_PROJECT_org.gradle.java.installations.auto-download: 'false'
       shell: bash
-      run: ./gradlew ${{ inputs.arguments }}
+      run: |
+        echo "::add-matcher::.github/problem-matcher.json"
+        for ((i=1; i<=${{ inputs.attempt-limit }}; i++)); do
+          ./gradlew $(echo "${{ inputs.arguments }}" | tr -d '\n') && break
+          if [ $i -lt ${{ inputs.attempt-limit }} ]; then
+            echo "Attempt $i failed. Retrying in ${{ inputs.attempt-delay }} seconds..."
+            sleep ${{ inputs.attempt-delay }}
+          else
+            echo "All attempts failed."
+            exit 1
+          fi
+        done

@@ -5,11 +5,13 @@ plugins {
 }
 
 tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
+  checkBuildEnvironmentConstraints = true
+  checkConstraints = true
   resolutionStrategy {
     componentSelection {
       all {
         val stable = setOf("com.hazelcast", "javax.json.bind",
-            "org.jetbrains.kotlin", "org.osgi", "org.slf4j")
+          "org.jetbrains.kotlin", "org.osgi", "org.slf4j")
         if ((candidate.group in stable) && isNonStable(candidate.version)) {
           reject("Release candidate")
         } else if ((candidate.module == "commons-io") && candidate.version.startsWith("2003")) {
@@ -18,6 +20,8 @@ tasks.named<DependencyUpdatesTask>("dependencyUpdates").configure {
       }
     }
     force(libs.guice)
+    force(libs.hazelcast)
+    force(libs.commons.collections4)
     force(libs.bundles.coherence.get())
   }
 }
