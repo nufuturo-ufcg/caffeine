@@ -51,6 +51,7 @@ import com.github.benmanes.caffeine.cache.simulator.parser.twitter.TwitterTraceR
 import com.github.benmanes.caffeine.cache.simulator.parser.umass.network.YoutubeTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.umass.storage.StorageTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.parser.wikipedia.WikipediaTraceReader;
+import com.github.benmanes.caffeine.cache.simulator.parser.nubank.NubankTraceReader;
 import com.github.benmanes.caffeine.cache.simulator.policy.AccessEvent;
 import com.github.benmanes.caffeine.cache.simulator.policy.Policy.Characteristic;
 import com.google.common.base.Splitter;
@@ -92,7 +93,8 @@ public enum TraceFormat {
   TWITTER(TwitterTraceReader::new),
   UMASS_STORAGE(StorageTraceReader::new),
   UMASS_YOUTUBE(YoutubeTraceReader::new),
-  WIKIPEDIA(WikipediaTraceReader::new);
+  WIKIPEDIA(WikipediaTraceReader::new),
+  NUBANK(NubankTraceReader::new);
 
   private final Function<String, TraceReader> factory;
 
